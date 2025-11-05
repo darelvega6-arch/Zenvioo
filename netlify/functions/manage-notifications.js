@@ -27,7 +27,7 @@ exports.handler = async (event) => {
 
   try {
     if (event.httpMethod === 'GET') {
-      const { userId } = event.queryStringParameters || {};
+      const { userId, type } = event.queryStringParameters || {};
       
       if (!userId) {
         return {
@@ -48,6 +48,10 @@ exports.handler = async (event) => {
         notifications = [];
       }
 
+      if (type) {
+        notifications = notifications.filter(n => n.type === type);
+      }
+
       return {
         statusCode: 200,
         body: JSON.stringify({ notifications }),
@@ -55,7 +59,7 @@ exports.handler = async (event) => {
     }
 
     if (event.httpMethod === 'POST') {
-      const { action, userId, notificationId, notification } = JSON.parse(event.body);
+      const { action, userId, notificationId, notification, organizeType } = JSON.parse(event.body);
 
       if (!action || !userId) {
         return {
@@ -91,7 +95,10 @@ exports.handler = async (event) => {
         }
       } else if (action === 'delete' && notificationId) {
         notifications = notifications.filter(n => n.id !== notificationId);
+      } else if (action === 'organize' && organizeType) {
+        notifications = notifications.filter(n => n.type === organizeType);
       }
+
 
       const putCommand = new PutObjectCommand({
         Bucket: process.env.MY_AWS_S3_BUCKET_NAME || 'libros-de-glam-2025',

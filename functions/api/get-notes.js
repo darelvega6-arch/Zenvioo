@@ -1,20 +1,19 @@
 export async function onRequest(context) {
   try {
-    const firebaseUrl = `https://beaboo-b21c7-default-rtdb.firebaseio.com/communityNotes.json`;
-    
-    const response = await fetch(firebaseUrl);
-    const data = await response.json();
-    
+    const list = await context.env.BUCKET.list({ prefix: 'notes/' });
     const notes = [];
-    if (data) {
-      Object.keys(data).forEach(key => {
-        notes.push({ ...data[key], noteId: key });
-      });
+
+    for (const item of list.objects.slice(0, 50)) {
+      if (item.key.endsWith('.json')) {
+        const obj = await context.env.BUCKET.get(item.key);
+        const text = await obj.text();
+        notes.push(JSON.parse(text));
+      }
     }
 
     notes.sort((a, b) => b.timestamp - a.timestamp);
 
-    return new Response(JSON.stringify({ notes: notes.slice(0, 50) }), {
+    return new Response(JSON.stringify({ notes }), {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {

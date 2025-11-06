@@ -4,7 +4,18 @@ export async function onRequest(context) {
   }
 
   try {
-    const { content, userId, authorName, authorImage, imageData, fileName, contentType } = await context.request.json();
+    const { content, userId, authorName, authorImage, imageData, fileName } = await context.request.json();
+    
+    let imageUrl = null;
+    
+    if (imageData && context.env.BUCKET) {
+      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+      const key = `notes/${userId}/${Date.now()}_${fileName}`;
+      
+      await context.env.BUCKET.put(key, buffer);
+      imageUrl = `https://pub-yourbucketid.r2.dev/${key}`;
+    }
 
     const noteData = {
       noteId: `note_${Date.now()}_${userId}`,
@@ -12,19 +23,13 @@ export async function onRequest(context) {
       userId,
       authorName,
       authorImage,
-      imageUrl: imageData ? 'pending' : null,
+      imageUrl,
       timestamp: Date.now(),
       likes: 0
     };
 
-    // Guardar en Firebase como respaldo temporal
-    const firebaseUrl = `https://beaboo-b21c7-default-rtdb.firebaseio.com/communityNotes.json`;
-    
-    await fetch(firebaseUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(noteData)
-    });
+    const noteKey = `notes/${noteData.noteId}.json`;
+    await context.env.BUCKET.put(noteKey, JSON.stringify(noteData));
 
     return new Response(JSON.stringify({ success: true, note: noteData }), {
       headers: { 'Content-Type': 'application/json' }

@@ -1,7 +1,10 @@
 const { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
 
+const BUCKET_NAME = 'zenvioo2025storage';
+const REGION = 'us-east-2';
+
 const s3Client = new S3Client({ 
-  region: process.env.AWS_REGION || 'us-east-1'
+  region: REGION
 });
 
 exports.handler = async (event) => {
@@ -29,13 +32,13 @@ exports.handler = async (event) => {
         const key = `notes/${userId}/${Date.now()}_${fileName}`;
 
         await s3Client.send(new PutObjectCommand({
-          Bucket: process.env.AWS_S3_BUCKET,
+          Bucket: BUCKET_NAME,
           Key: key,
           Body: buffer,
           ContentType: contentType,
         }));
 
-        imageUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+        imageUrl = `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/${key}`;
       }
 
       const noteData = {
@@ -46,7 +49,7 @@ exports.handler = async (event) => {
       };
 
       await s3Client.send(new PutObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET,
+        Bucket: BUCKET_NAME,
         Key: `notes/${noteData.noteId}.json`,
         Body: JSON.stringify(noteData),
         ContentType: 'application/json',
@@ -57,7 +60,7 @@ exports.handler = async (event) => {
 
     if (path === '/api/get-notes') {
       const list = await s3Client.send(new ListObjectsV2Command({
-        Bucket: process.env.AWS_S3_BUCKET,
+        Bucket: BUCKET_NAME,
         Prefix: 'notes/',
       }));
 
@@ -66,7 +69,7 @@ exports.handler = async (event) => {
         for (const item of list.Contents.slice(0, 50)) {
           if (item.Key.endsWith('.json')) {
             const obj = await s3Client.send(new GetObjectCommand({
-              Bucket: process.env.AWS_S3_BUCKET,
+              Bucket: BUCKET_NAME,
               Key: item.Key,
             }));
             const text = await obj.Body.transformToString();
@@ -86,13 +89,13 @@ exports.handler = async (event) => {
       const key = `${imageType}/${userId}/${Date.now()}_${fileName}`;
 
       await s3Client.send(new PutObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET,
+        Bucket: BUCKET_NAME,
         Key: key,
         Body: buffer,
         ContentType: contentType,
       }));
 
-      const imageUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+      const imageUrl = `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/${key}`;
       return { statusCode: 200, headers, body: JSON.stringify({ imageUrl }) };
     }
 

@@ -4304,10 +4304,12 @@ setInterval(checkScheduledChapters, 60000);
   }
 
   function openNoteCreation() {
-    // Abrir la comunidad pero directamente en el tab de agregar nota
+    // Abrir la comunidad y mostrar formulario de creación de nota
     closeCreatorHub();
     document.getElementById('community-view').classList.remove('hidden');
-    switchCommunityTab('add');
+    // Ocultar lista de notas y mostrar formulario
+    document.getElementById('notes-feed').classList.add('hidden');
+    document.getElementById('add-note-form').classList.remove('hidden');
   }
 
   function loadCreatorStats() {

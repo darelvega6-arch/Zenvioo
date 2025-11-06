@@ -1899,11 +1899,16 @@ document.getElementById('note-content').addEventListener('input', function() {
     <!-- Search Bar and Category Filter -->
     <div class="space-y-4 mb-6">
       <div class="relative">
-        <input id="search-input" type="text" placeholder="Search for stories or authors" class="w-full pl-12 pr-4 py-3 rounded-full bg-gray-100 text-black border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#FE2C55] focus:border-transparent text-base">
+        <input id="search-input" type="text" placeholder="Search for stories or authors" class="w-full pl-12 pr-12 py-3 rounded-full bg-gray-100 text-black border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#FE2C55] focus:border-transparent text-base" oninput="toggleClearButton()">
         <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
+        <button id="clear-search-btn" onclick="clearSearchInput()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#FE2C55] transition-colors hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
       <select id="category-filter" class="w-full p-3 rounded-full bg-gray-100 text-black border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#FE2C55]">
         <option value="">All Categories</option>
@@ -2006,6 +2011,39 @@ document.getElementById('note-content').addEventListener('input', function() {
     cancelVoiceBtn.addEventListener('click', () => {
       document.getElementById('voice-animation-container').classList.add('hidden');
     });
+  }
+
+  // Función para mostrar/ocultar el botón de limpiar búsqueda
+  function toggleClearButton() {
+    const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    
+    if (searchInput && clearBtn) {
+      if (searchInput.value.trim().length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+    }
+  }
+
+  // Función para limpiar el campo de búsqueda
+  function clearSearchInput() {
+    const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.focus();
+      
+      // Disparar evento de input para actualizar resultados de búsqueda
+      const event = new Event('input', { bubbles: true });
+      searchInput.dispatchEvent(event);
+    }
+    
+    if (clearBtn) {
+      clearBtn.classList.add('hidden');
+    }
   }
 
   // Lógica de seguir autores (simulación)
@@ -5127,106 +5165,6 @@ async function likeNote(noteId) {
       navigator.vibrate([200, 100, 200]);
     }
 }
-
-  function openNotifications() {
-    showLoader();
-    setTimeout(async () => {
-      const currentUser = firebase.auth().currentUser;
-      if (!currentUser) {
-        hideLoader();
-        return;
-      }
-      
-      try {
-        // Request notification permission if not granted (only on supported platforms)
-        if ('Notification' in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-          Notification.requestPermission().catch(err => {
-            console.log('Notification permission error:', err);
-          });
-        }
-        
-        // Ocultar la barra superior
-        const topNav = document.getElementById('top-navbar');
-        if (topNav) {
-          topNav.style.display = 'none';
-        }
-        
-        document.getElementById('notifications-modal').classList.remove('hidden');
-        
-        // Cargar notificaciones desde AWS S3
-        const response = await fetch(`/.netlify/functions/manage-notifications?userId=${currentUser.uid}`);
-        const result = await response.json();
-        
-        if (!response.ok) {
-          console.error('Error al cargar notificaciones:', result.error);
-          hideLoader();
-          return;
-        }
-
-        const notificationsList = document.getElementById('notifications-list');
-        notificationsList.innerHTML = "";
-        
-        const notifications = result.notifications || [];
-        
-        notifications.forEach(notification => {
-          const div = document.createElement('div');
-          div.className = `notification-item ${notification.type || 'info'}`;
-          
-          // Icon based on notification type
-          const iconMap = {
-            follow: 'user-plus',
-            like: 'heart',
-            comment: 'comment',
-            info: 'info-circle'
-          };
-          
-          div.innerHTML = `
-            <div class="flex items-center gap-2">
-              <i class="fas fa-${iconMap[notification.type || 'info']} ${notification.type}-icon"></i>
-              <div class="flex-1">
-                <div class="notification-message">${notification.message}</div>
-                <div class="notification-time">${new Date(notification.timestamp).toLocaleString()}</div>
-              </div>
-              ${!notification.read ? '<span class="unread-dot"></span>' : ''}
-            </div>
-          `;
-          
-          // Mark as read when clicked
-          const markAsRead = async () => {
-            if (!notification.read) {
-              try {
-                await fetch('/.netlify/functions/manage-notifications', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    action: 'mark-read',
-                    userId: currentUser.uid,
-                    notificationId: notification.id
-                  })
-                });
-              } catch (error) {
-                console.error('Error al marcar como leída:', error);
-              }
-            }
-          };
-          
-          div.addEventListener('click', markAsRead);
-          div.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            markAsRead();
-          });
-          
-          notificationsList.appendChild(div);
-        });
-        hideLoader();
-      } catch (error) {
-        console.error('Error loading notifications:', error);
-        hideLoader();
-      }
-    }, 100);
-  }
 
   function closeNotifications() {
     document.getElementById('notifications-modal').classList.add('hidden');

@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs18.x
+    Environment:
+      Variables:
+        AWS_S3_BUCKET:
+          Ref: S3BucketName
+        AWS_REGION:
+          Ref: AWS::Region
+  Api:
+    Cors:
+      AllowMethods: '''*'''
+      AllowHeaders: '''*'''
+      AllowOrigin: '''*'''
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: Nombre del bucket S3
+Resources:
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: '''*'''
+        AllowHeaders: '''*'''
+        AllowOrigin: '''*'''
+  UploadNoteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: UploadNoteFunction
+      Handler: index.handler
+      Policies:
+      - S3CrudPolicy:
+          BucketName:
+            Ref: S3BucketName
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGateway
+            Path: /api/upload-note
+            Method: post
+    Metadata:
+      SamResourceId: UploadNoteFunction
+  GetNotesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: GetNotesFunction
+      Handler: index.handler
+      Policies:
+      - S3ReadPolicy:
+          BucketName:
+            Ref: S3BucketName
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGateway
+            Path: /api/get-notes
+            Method: get
+    Metadata:
+      SamResourceId: GetNotesFunction
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod

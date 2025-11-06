@@ -1,40 +1,20 @@
-import { S3Client, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
-
 export async function onRequest(context) {
   try {
-    const s3Client = new S3Client({
-      region: context.env.AWS_REGION,
-      credentials: {
-        accessKeyId: context.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: context.env.AWS_SECRET_ACCESS_KEY,
-      },
-    });
-
-    const listCommand = new ListObjectsV2Command({
-      Bucket: context.env.AWS_S3_BUCKET,
-      Prefix: 'notes/',
-    });
-
-    const listResponse = await s3Client.send(listCommand);
+    const firebaseUrl = `https://beaboo-b21c7-default-rtdb.firebaseio.com/communityNotes.json`;
+    
+    const response = await fetch(firebaseUrl);
+    const data = await response.json();
+    
     const notes = [];
-
-    if (listResponse.Contents) {
-      for (const item of listResponse.Contents.slice(0, 50)) {
-        if (item.Key.endsWith('.json')) {
-          const getCommand = new GetObjectCommand({
-            Bucket: context.env.AWS_S3_BUCKET,
-            Key: item.Key,
-          });
-          const response = await s3Client.send(getCommand);
-          const body = await response.Body.transformToString();
-          notes.push(JSON.parse(body));
-        }
-      }
+    if (data) {
+      Object.keys(data).forEach(key => {
+        notes.push({ ...data[key], noteId: key });
+      });
     }
 
     notes.sort((a, b) => b.timestamp - a.timestamp);
 
-    return new Response(JSON.stringify({ notes }), {
+    return new Response(JSON.stringify({ notes: notes.slice(0, 50) }), {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {

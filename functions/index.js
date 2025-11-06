@@ -22,21 +22,21 @@ export default {
     try {
       let response;
 
-      switch (path) {
-        case '/upload-image':
-          response = await uploadImage(request, env);
-          break;
-        case '/upload-note':
-          response = await uploadNote(request, env);
-          break;
-        case '/get-stories':
-          response = await getStories(request, env);
-          break;
-        case '/get-notes':
-          response = await getNotes(request, env);
-          break;
-        default:
-          response = new Response('Not Found', { status: 404 });
+      if (path === '/upload-image') {
+        response = await uploadImage(request, env);
+      } else if (path === '/upload-note') {
+        response = await uploadNote(request, env);
+      } else if (path === '/get-stories') {
+        response = await getStories(request, env);
+      } else if (path === '/get-notes') {
+        response = await getNotes(request, env);
+      } else if (path === '/like-note' || path === '/delete-note' || path === '/manage-following' || path === '/check-user-limits' || path === '/manage-notifications') {
+        response = new Response(JSON.stringify({ success: true, message: 'Endpoint en desarrollo' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } else {
+        response = new Response('Not Found', { status: 404 });
       }
 
       // Add CORS headers to response
